@@ -17,6 +17,7 @@ dither_on () {
 }
 
 dither_off () {
+	[ ! -s $TOGGLE ] && rm $TOGGLE && exit 1  # If toggle file empty, remove file and exit
 	WALL_TO_SET=$(head -n 1 $TOGGLE)
 	feh --bg-center $WALL_TO_SET || exit 1
 }
