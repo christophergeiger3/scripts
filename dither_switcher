@@ -1,0 +1,29 @@
+#!/bin/zsh
+
+TOGGLE=$HOME/.dither_on
+WALLPAPER_DIR=$HOME/Pictures/wallpapers/active
+DITHER_DIR=$HOME/Pictures/wallpapers/dithered
+CURRENT_WALLPAPER=$(cat $HOME/.fehbg | tail -n 1 | awk '{print $4}' | tr -d \' )
+WALLPAPER_NO_EXTENSION=$(echo $CURRENT_WALLPAPER | xargs basename | cut -f 1 -d '.')
+
+flip_toggle () {
+	# Deletes toggle file if no argument passed, or saves argument in toggle file
+	[ -z $1 ] && rm $TOGGLE || echo $1 > $TOGGLE 
+}
+
+dither_on () {
+	WALL_TO_SET=${DITHER_DIR}/${WALLPAPER_NO_EXTENSION}.png
+	feh --bg-center $WALL_TO_SET || exit 1
+}
+
+dither_off () {
+	WALL_TO_SET=$(head -n 1 $TOGGLE)
+	feh --bg-center $WALL_TO_SET || exit 1
+}
+
+# If toggle file not found, set dither, then create the toggle file, and exit.
+[ ! -e $TOGGLE ] && dither_on $CURRENT_WALLPAPER && flip_toggle $CURRENT_WALLPAPER && exit
+
+# Toggle file found; turn dither off, remove toggle, exit.
+dither_off && flip_toggle && exit
+

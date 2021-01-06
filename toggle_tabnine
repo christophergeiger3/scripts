@@ -1,0 +1,19 @@
+
+toggle_on () {
+	sed -i $"s|^.*tabnine-vim.*|\tPlug 'zxqfl/tabnine-vim', { 'on': [] }|" ~/.vimrc && \
+	echo toggled on && exit
+}
+
+toggle_off () {
+	sed -i $"s|^.*tabnine-vim.*|\tPlug 'zxqfl/tabnine-vim' \", { 'on': [] }|" ~/.vimrc && \
+	echo toggled off && exit
+}
+
+[[ "$1" == "on" ]] && toggle_on && exit
+[[ "$1" == "off" ]] && toggle_off && exit
+
+# Toggle if commented (toggle order matters)
+grep --silent -E '.*tabnine-vim.*".*{.*on' ~/.vimrc && toggle_on
+
+# Toggle if uncommented
+grep --silent -E '.*tabnine-vim.*{.*on' ~/.vimrc && toggle_off
