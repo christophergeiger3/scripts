@@ -1,3 +1,4 @@
 #!/bin/zsh
 
+rm $HOME/.dither_on
 find $HOME/Pictures/wallpapers/active -type f | shuf -n 1 | xargs feh --bg-center
