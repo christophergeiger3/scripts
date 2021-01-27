@@ -1,0 +1,2 @@
+#!/bin/zsh
+for device in $(ls /sys/bus/usb/devices/*/product); do echo $device;cat $device;done
