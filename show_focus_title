@@ -1,0 +1,5 @@
+#!/bin/zsh
+#FOCUS_WINDOW_TITLE=$(xdotool getwindowfocus getwindowname)
+FOCUS_WINDOW_TITLE=$(xdotool getactivewindow getwindowname)
+
+dunstify -h string:x-dunst-stack-tag:showtitle $FOCUS_WINDOW_TITLE
