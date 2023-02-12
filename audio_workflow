@@ -1,4 +1,0 @@
-qjackctl -s&
-sleep 5s
-ardour6&
-midid -e

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+browser=$(xdg-settings get default-web-browser)
+
+## TODO
+i3_msg() {
+    # i3-msg -q "exec --no-startup-id notify-send -t 1000 -u low -i $1 $2"
+    echo $2
+}
+
+set_default_browser() {
+    i3_msg $1 "Default browser set to $1"
+    xdg-settings set default-web-browser $1
+}
+
+[[ $browser == "firefox.desktop" ]] && set_default_browser google-chrome.desktop
+[[ $browser == "google-chrome.desktop" ]] && set_default_browser firefox.desktop
