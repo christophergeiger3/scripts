@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+# Requires imgmagick convert
+
 COLORS=6
 
 # Dithers $1 (image file) to become $2
