@@ -2,14 +2,13 @@
 
 browser=$(xdg-settings get default-web-browser)
 
-## TODO
-i3_msg() {
-    # i3-msg -q "exec --no-startup-id notify-send -t 1000 -u low -i $1 $2"
-    echo $2
+send_notification() {
+    # Send notification with dunst
+    dunstify -u low -t 3000 'Default Browser Change' "$1"
 }
 
 set_default_browser() {
-    i3_msg $1 "Default browser set to $1"
+    send_notification "Default browser set to $1"
     xdg-settings set default-web-browser $1
 }
 
