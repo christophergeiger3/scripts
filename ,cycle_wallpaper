@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Cycle through wallpapers sequentially with feh
+#
+
+# Get the current wallpaper
+current_wallpaper=$(cat ~/.fehbg | awk '{print $NF}')
+
+# Get the list of wallpapers
+wallpapers=($(ls ~/.wallpaper))
+
+# Get the index of the current wallpaper
+current_wallpaper_index=$(printf '%s ' "${wallpapers[@]}" | grep -n "$current_wallpaper" | cut -d: -f1)
+
+# Get the next wallpaper
+next_wallpaper_index=$((current_wallpaper_index + 1))
+next_wallpaper=${wallpapers[$next_wallpaper_index]}
+if [[ -z $next_wallpaper ]]; then
+    next_wallpaper=${wallpapers[0]}
+fi
+
+# Set the next wallpaper
+feh --bg-scale ~/.wallpaper/$next_wallpaper
+
+# Send notification with dunst
+dunstify -u low -t 3000 'Wallpaper Change' "Wallpaper set to $next_wallpaper"
