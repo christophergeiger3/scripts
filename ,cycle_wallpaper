@@ -1,26 +1,103 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Cycle through wallpapers sequentially with feh
-#
-
-# Get the current wallpaper
-current_wallpaper=$(cat ~/.fehbg | awk '{print $NF}')
-
-# Get the list of wallpapers
-wallpapers=($(ls ~/.wallpaper))
-
-# Get the index of the current wallpaper
-current_wallpaper_index=$(printf '%s ' "${wallpapers[@]}" | grep -n "$current_wallpaper" | cut -d: -f1)
-
-# Get the next wallpaper
-next_wallpaper_index=$((current_wallpaper_index + 1))
-next_wallpaper=${wallpapers[$next_wallpaper_index]}
-if [[ -z $next_wallpaper ]]; then
-    next_wallpaper=${wallpapers[0]}
+set -o errexit
+set -o nounset
+set -o pipefail
+if [[ "${TRACE-0}" == "1" ]]; then
+    set -o xtrace
 fi
 
-# Set the next wallpaper
-feh --bg-scale ~/.wallpaper/$next_wallpaper
+help() {
+    echo 'Usage: ./,cycle_wallpaper [OPTIONS]
 
-# Send notification with dunst
-dunstify -u low -t 3000 'Wallpaper Change' "Wallpaper set to $next_wallpaper"
+Cycle through wallpapers in a directory using feh and dunstify.
+
+Options:
+  -h, --help      Show help and exit.
+  -w, --wallpaper Set the wallpaper directory. Defaults to $HOME/.wallpaper.
+'
+    exit
+}
+
+# Define the wallpaper directory
+WALLPAPER_DIR="$HOME/.wallpaper"
+
+while (("$#")); do
+    case "$1" in
+    -h | --help)
+        help
+        ;;
+    -w | --wallpaper)
+        if [[ -n "${2-}" ]]; then
+            WALLPAPER_DIR="$2"
+            shift
+        else
+            echo "Error: Argument for $1 is missing." >&2
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Error: Unsupported argument $1" >&2
+        help
+        ;;
+    esac
+    shift
+done
+
+get_current_wallpaper() {
+    # Extract the current wallpaper filename from the fehbg file
+    tail -n +2 ~/.fehbg | awk '{print $NF}' | xargs basename
+}
+
+get_wallpapers() {
+    # Get a sorted array of wallpaper filenames in the wallpaper directory
+    mapfile -t wallpapers < <(ls -1 "$WALLPAPER_DIR" | sort)
+    printf '%s\n' "${wallpapers[@]}"
+}
+
+get_current_wallpaper_index() {
+    # Get the index of the current wallpaper in the wallpapers array
+    local current_wallpaper="$1"
+    shift
+    local wallpapers=("$@")
+
+    printf '%s\n' "${wallpapers[@]}" | grep -nw "$current_wallpaper" | cut -d: -f1 | awk '{print $1-1}'
+}
+
+get_next_wallpaper() {
+    # Get the filename of the next wallpaper in the wallpapers array
+    local current_wallpaper_index="$1"
+    shift
+    local wallpapers=("$@")
+
+    local next_wallpaper_index=$(((current_wallpaper_index + 1) % ${#wallpapers[@]}))
+    printf '%s\n' "${wallpapers[$next_wallpaper_index]:-${wallpapers[0]}}"
+}
+
+set_wallpaper() {
+    # Set the wallpaper using feh
+    local wallpaper="$1"
+
+    feh --bg-scale "$WALLPAPER_DIR/$wallpaper"
+}
+
+send_notification() {
+    # Send a notification using dunst
+    local wallpaper="$1"
+
+    dunstify -u low -t 3000 'Wallpaper Change' "Wallpaper set to $wallpaper"
+}
+
+# Change to the script directory
+cd "$(dirname "$0")"
+
+main() {
+    current_wallpaper=$(get_current_wallpaper)
+    wallpapers=($(get_wallpapers))
+    current_wallpaper_index=$(get_current_wallpaper_index "$current_wallpaper" "${wallpapers[@]}")
+    next_wallpaper=$(get_next_wallpaper "$current_wallpaper_index" "${wallpapers[@]}")
+    set_wallpaper "$next_wallpaper"
+    send_notification "$next_wallpaper"
+}
+
+main "$@"
