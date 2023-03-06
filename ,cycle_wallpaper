@@ -10,19 +10,21 @@ if [[ "${TRACE-0}" == "1" ]]; then
 fi
 
 help() {
-    echo 'Usage: ./,cycle_wallpaper [OPTIONS]
+    echo 'Usage: ./cycle_wallpaper [OPTIONS]
 
 Cycle through wallpapers in a directory using feh and dunstify.
 
 Options:
   -h, --help      Show help and exit.
   -w, --wallpaper Set the wallpaper directory. Defaults to $HOME/.wallpaper.
+  -r, --reverse   Cycle through wallpapers in reverse order.
 '
     exit
 }
 
-# Define the wallpaper directory
+# Define the wallpaper directory and cycle direction
 WALLPAPER_DIR="$HOME/.wallpaper"
+reverse=false
 
 while (("$#")); do
     case "$1" in
@@ -37,6 +39,9 @@ while (("$#")); do
             echo "Error: Argument for $1 is missing." >&2
             exit 1
         fi
+        ;;
+    -r | --reverse)
+        reverse=true
         ;;
     *)
         echo "Error: Unsupported argument $1" >&2
@@ -67,13 +72,18 @@ get_current_wallpaper_index() {
 }
 
 get_next_wallpaper() {
-    # Get the filename of the next wallpaper in the wallpapers array
+    # Get the filename of the next or previous wallpaper in the wallpapers array
     local current_wallpaper_index="$1"
     shift
     local wallpapers=("$@")
 
-    local next_wallpaper_index=$(((current_wallpaper_index + 1) % ${#wallpapers[@]}))
-    printf '%s\n' "${wallpapers[$next_wallpaper_index]:-${wallpapers[0]}}"
+    if [[ "$reverse" == true ]]; then
+        local prev_wallpaper_index=$(((current_wallpaper_index - 1 + ${#wallpapers[@]}) % ${#wallpapers[@]}))
+        printf '%s\n' "${wallpapers[$prev_wallpaper_index]:-${wallpapers[0]}}"
+    else
+        local next_wallpaper_index=$(((current_wallpaper_index + 1) % ${#wallpapers[@]}))
+        printf '%s\n' "${wallpapers[$next_wallpaper_index]:-${wallpapers[0]}}"
+    fi
 }
 
 set_wallpaper() {
