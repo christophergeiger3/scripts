@@ -16,7 +16,7 @@ Cycle through wallpapers in a directory using feh and dunstify.
 
 Options:
   -h, --help      Show help and exit.
-  -w, --wallpaper Set the wallpaper directory. Defaults to $HOME/.wallpaper.
+  -d, --directory Set the wallpaper directory. Defaults to $HOME/.wallpaper.
   -r, --reverse   Cycle through wallpapers in reverse order.
 '
     exit
@@ -31,7 +31,7 @@ while (("$#")); do
     -h | --help)
         help
         ;;
-    -w | --wallpaper)
+    -d | --directory)
         if [[ -n "${2-}" ]]; then
             WALLPAPER_DIR="$2"
             shift
