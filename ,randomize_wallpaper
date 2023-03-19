@@ -1,2 +1,5 @@
 #!/bin/sh
-feh --bg-scale --randomize ~/.wallpaper/*
+
+WALLPAPER_DIR="$HOME/.wallpaper"
+
+feh --bg-scale --randomize $WALLPAPER_DIR/*
