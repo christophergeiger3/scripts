@@ -3,7 +3,6 @@
 browser=$(xdg-settings get default-web-browser)
 
 send_notification() {
-    # Send notification with dunst
     dunstify -u low -t 3000 'Default Browser Change' "$1"
 }
 
