@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+## Toggles the wallpaper between its dithered and undithered versions.
+
 TOGGLE=$HOME/.dither_on
 WALLPAPER_DIR=$HOME/Pictures/wallpapers/active
 DITHER_DIR=$HOME/Pictures/wallpapers/dithered
