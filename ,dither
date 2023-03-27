@@ -1,21 +1,22 @@
 #!/bin/zsh
 
 # Requires imgmagick convert
+# Converts a file to a dithered version with a specified number of colors
 
 COLORS=6
 
 # Dithers $1 (image file) to become $2
-dither () {
-        echo convert $1 -dither Riemersma -colors $COLORS $2
-        convert $1 -dither Riemersma -colors $COLORS $2
+dither() {
+	echo convert $1 -dither Riemersma -colors $COLORS $2
+	convert $1 -dither Riemersma -colors $COLORS $2
 }
 
 while getopts ":c:h" o; do case "${o}" in
 	h) printf "dither [OPTIONS] INPUTFILE OUTPUTFILE\\n-h : Help\\n-c : Number of dither colors (defualt: 6)\\n" && exit 1 ;;
 	c) COLORS=${OPTARG} ;;
 	*) printf "Invalid option: -%s\\n" "$OPTARG" && exit 1 ;;
-esac done
-shift $((OPTIND-1))
+	esac done
+shift $((OPTIND - 1))
 
 [ -z "$1" ] && echo "INPUTFILE not set" && exit 1
 [ -z "$2" ] && echo "OUTPUTFILE not set" && exit 1
