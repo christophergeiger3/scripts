@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source ~/bin/,logger
+
 # https://sharats.me/posts/shell-script-best-practices/
 
 set -o errexit
@@ -10,16 +12,18 @@ if [[ "${TRACE-0}" == "1" ]]; then
 fi
 
 help() {
-    echo 'Usage: ./cycle_wallpaper [OPTIONS]
+    e_header "Usage: ./cycle_wallpaper [OPTIONS]"
 
-Cycle through wallpapers in a directory using feh and dunstify.
+    e_bold "Options:"
+    e_arrow "  -h, --help      Show help and exit."
+    e_arrow "  -d, --directory Set the wallpaper directory. Defaults to $HOME/.wallpaper."
+    e_arrow "  -r, --reverse   Cycle through wallpapers in reverse order."
+    e_arrow "  -R, --random    Select a random wallpaper instead of cycling through them."
 
-Options:
-  -h, --help      Show help and exit.
-  -d, --directory Set the wallpaper directory. Defaults to $HOME/.wallpaper.
-  -r, --reverse   Cycle through wallpapers in reverse order.
-  -R, --random    Select a random wallpaper instead of cycling through them.
-'
+    echo
+    e_note "You can use both -r and -R options together to select a random wallpaper in reverse order."
+    echo
+
     exit
 }
 
