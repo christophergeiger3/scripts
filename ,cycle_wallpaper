@@ -41,7 +41,7 @@ while (("$#")); do
             WALLPAPER_DIR="$2"
             shift
         else
-            echo "Error: Argument for $1 is missing." >&2
+            e_error "Error: Argument for $1 is missing." >&2
             exit 1
         fi
         ;;
@@ -53,7 +53,7 @@ while (("$#")); do
         exit
         ;;
     *)
-        echo "Error: Unsupported argument $1" >&2
+        e_error "Error: Unsupported argument $1" >&2
         help
         ;;
     esac
