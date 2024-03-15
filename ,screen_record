@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Print the help text if -h or --help is passed as an argument
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    echo "Usage: %2Cscreen_record [OPTION]"
+    echo "Starts a screen recording session with simplescreenrecorder"
+    echo
+    echo "Options:"
+    echo "  -h, --help  Display this help message"
+    echo "  -f, --file  Specify the file to save the recording to"
+    exit 0
+fi
+
+# Check if simplescreenrecorder is installed
+if ! command -v simplescreenrecorder &> /dev/null; then
+    echo "simplescreenrecorder is not installed. Please install it using your package manager."
+    exit 1
+fi
+
+# Check if screenkey is installed
+if ! command -v screenkey &> /dev/null; then
+    echo "screenkey is not installed. Please install it using your package manager."
+    exit 1
+fi
+
+# Check that the settings file exists in $HOME/.ssr/settings.conf
+if [ ! -f $HOME/.ssr/settings.conf ]; then
+    echo "The settings file ~/.ssr/settings.conf does not exist. Please run simplescreenrecorder to create it."
+    exit 1
+fi
+
+# Parse the arguments
+while [ "$1" != "" ]; do
+    case $1 in
+        -f | --file )   shift
+            FILE=$1
+        ;;
+        * )             echo "Invalid option: $1"
+            exit 1
+    esac
+    shift
+done
+
+# If no file is specified, default to the current date and time in the format "YYYY-MM-DD-HH-MM-SS.mp4"
+if [ -z "$FILE" ]; then
+    FILE=/tmp/$(date +"%Y-%m-%d_%H-%M-%S").mp4
+fi
+
+# Make a copy of the settings file and modify it to save the recording to the specified file
+cp $HOME/.ssr/settings.conf $HOME/.ssr/settings.tmp.conf
+
+# Find the line that starts with file= and replace the line with file=$FILE
+awk -i inplace -v file="$FILE" '/^file=/ {sub(/=.*/, "=" file)} 1' $HOME/.ssr/settings.tmp.conf
+
+# Launch screenkey and store the process ID in a variable
+screenkey & SCREENKEY_PID=$!
+
+# Start the screen recording session
+simplescreenrecorder --settingsfile=$HOME/.ssr/settings.tmp.conf --start-recording
+
+## Clean-up
+
+# Remove the temporary settings file
+rm $HOME/.ssr/settings.tmp.conf
+
+# Kill the screenkey process
+kill $SCREENKEY_PID
