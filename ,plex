@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper to launch ,launch-frameless for Plex
+,launch-frameless "https://app.plex.tv/desktop" &

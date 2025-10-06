@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # Requires imgmagick convert
 # Converts a file to a dithered version with a specified number of colors

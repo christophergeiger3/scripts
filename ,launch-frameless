@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# launch-frameless - Launch a web application in a frameless window
+# Requires: chromium
+
+show_help() {
+    cat << EOF
+Usage: launch-frameless <URL>
+Options:
+  -h, --help      Show this help message
+Examples:
+    launch-frameless https://example.com
+EOF
+}
+
+parse_args() {
+    if [[ $# -eq 0 ]]; then
+        show_help
+        exit 1
+    fi
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                url="$1"
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "${url:-}" ]]; then
+        echo "Error: No URL specified."
+        show_help
+        exit 1
+    fi
+}
+
+parse_args "$@"
+
+chromium --app="$url" --new-window

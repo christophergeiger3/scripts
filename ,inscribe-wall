@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# inscribe-wall — overlay a fancy label on an image and set it as wallpaper with feh.
+# Requires: fancy-inscribe, feh, sha256sum
+
+set -uo pipefail
+
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/inscribe-wall"
+
+show_help() {
+  cat <<EOF
+inscribe-wall — overlay a label on an image and set it as wallpaper with feh
+
+Usage: $(basename "$0")
+
+Required:
+  input_image            Path to the input image file
+  -t, --text  TEXT       Text to inscribe onto the image
+
+OPTIONS:
+  -o, --output FILE       Output file name (default: cached in $CACHE_DIR)
+      --feh-mode MODE     bg-fill | bg-scale | bg-center | bg-max (default: bg-scale)
+  -n, --no-cache          Always regenerate (ignore cache)
+  -h, --help              Show this help and exit
+
+Examples:
+  # Inscribe text onto image.jpg, output saved as image_inscribed.jpg
+  $(basename "$0") -t "DRAFT" image.jpg
+
+  # Specify a custom output file
+  $(basename "$0") -t "FINAL" -o confidential.jpg image.jpg
+
+  # Use a specific feh mode
+  $(basename "$0") -t "FINAL" --feh-mode bg-center
+
+  # Bypass cache and always regenerate
+  $(basename "$0") -t "FINAL" -n image.jpg
+EOF
+}
+
+# Defaults
+output=""
+text=""
+feh_mode="bg-scale"
+no_cache=0
+input=""
+mkdir -p "$CACHE_DIR"
+
+# Parse short options first
+TEMP=$(getopt -o t:o:nh --long text:,output:,feh-mode:,no-cache,help -n "$0" -- "$@") || { show_help; exit 1; }
+eval set -- "$TEMP"
+
+while true; do
+  case "$1" in
+    -t|--text) text="$2"; shift 2 ;;
+    -o|--output) output="$2"; shift 2 ;;
+    --feh-mode) feh_mode="$2"; shift 2 ;;
+    -n|--no-cache) no_cache=1; shift ;;
+    -h|--help) show_help; exit 0 ;;
+    --) shift; break ;;
+    *) echo "Unknown option: $1"; show_help; exit 1 ;;
+  esac
+done
+
+# Remaining argument should be the input image
+if [ $# -lt 1 ]; then
+  echo "Error: input image is required"
+  show_help
+  exit 1
+fi
+input="$1"
+
+# Check required params
+if [ -z "$text" ]; then
+  echo "Error: --text is required"
+  show_help
+  exit 1
+fi
+
+# Default output if not given
+if [ -z "$output" ]; then
+  hash=$(sha256sum "$input" | awk '{print $1}')
+  safe_text=$(echo "$text" | tr ' /' '__')
+  output="$CACHE_DIR/${hash}_${safe_text}.jpg"
+fi
+
+echo "Input:  $input"
+echo "Text:   $text"
+echo "Output: $output"
+echo "feh mode: $feh_mode"
+
+# If caching is enabled and the output file exists, skip regeneration
+if [ $no_cache -eq 0 ] && [ -f "$output" ]; then
+  echo "Using cached output: $output"
+else
+  echo "Generating output: $output"
+  fancy-inscribe -t "$text" -o "$output" "$input" || {
+    echo "Error: fancy-inscribe failed"
+    exit 1
+  }
+fi
+
+# Set as wallpaper with feh
+feh --no-fehbg --"$feh_mode" "$output" || {
+  echo "Error: feh failed to set wallpaper"
+  exit 1
+}
+echo "Wallpaper set successfully."

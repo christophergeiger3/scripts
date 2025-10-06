@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+show_help() {
+  cat <<EOF
+Usage: $(basename "$0") -t "TEXT" input_image [options]
+
+Required:
+  input_image          Path to the input image file
+  -t, --text TEXT      Text to inscribe onto the image
+
+Options:
+  -o, --output FILE    Output file name (default: inputname_inscribed.jpg)
+  -h, --help           Show this help and exit
+
+Examples:
+  # Inscribe text onto image.jpg, output saved as image_inscribed.jpg
+  $(basename "$0") -t "DRAFT" image.jpg
+
+  # Specify a custom output file
+  $(basename "$0") -t "CONFIDENTIAL" -o confidential.jpg image.jpg
+EOF
+}
+
+
+# Defaults
+output=""
+text=""
+
+# Parse short options first
+TEMP=$(getopt -o t:o:h --long text:,output:,help -n "$0" -- "$@") || { show_help; exit 1; }
+eval set -- "$TEMP"
+
+while true; do
+  case "$1" in
+    -t|--text) text="$2"; shift 2 ;;
+    -o|--output) output="$2"; shift 2 ;;
+    -h|--help) show_help; exit 0 ;;
+    --) shift; break ;;
+    *) echo "Unknown option: $1"; show_help; exit 1 ;;
+  esac
+done
+
+# Remaining argument should be the input image
+if [ $# -lt 1 ]; then
+  echo "Error: input image is required"
+  show_help
+  exit 1
+fi
+input="$1"
+
+# Check required params
+if [ -z "$text" ]; then
+  echo "Error: --text is required"
+  show_help
+  exit 1
+fi
+
+# Default output if not given
+if [ -z "$output" ]; then
+  base="${input%.*}"
+  output="${base}_inscribed.jpg"
+fi
+
+echo "Input:  $input"
+echo "Text:   $text"
+echo "Output: $output"
+
+# Detect correct imagemagick command
+if command -v magick >/dev/null 2>&1; then
+    IMAGEMAGICK_CMD="magick"
+elif command -v convert >/dev/null 2>&1; then
+    IMAGEMAGICK_CMD="convert"
+else
+    echo "Error: ImageMagick is not installed."
+    exit 1
+fi
+
+WIDTH="$($IMAGEMAGICK_CMD identify -format "%w" "$input")"
+SCALE=15
+POINTSIZE=$((WIDTH / SCALE))
+POINTSIZE=$((POINTSIZE < 24 ? 24 : POINTSIZE))
+
+$IMAGEMAGICK_CMD "$input" \
+    -font JetBrains-Mono-Bold \
+    -gravity northeast -pointsize "$POINTSIZE" \
+    -fill white -stroke black -strokewidth 2 \
+    -annotate +30+30 "$text" \
+    "$output"
+
+echo "Inscribed image saved to $output"

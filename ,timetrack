@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# =========================
+# Config file (XDG-friendly)
+# =========================
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/timew-dmenu"
+CONFIG_FILE="$CONFIG_DIR/config"
+
+# ------------
+# Dependencies
+# ------------
+FEH_OK=1
+if ! command -v feh >/dev/null 2>&1; then
+  FEH_OK=0
+  echo "Warning: feh not found; skipping wallpaper changes." >&2
+fi
+
+if ! command -v dunstify >/dev/null 2>&1; then
+  echo "Warning: dunstify not found; notifications disabled." >&2
+  DUNSTIFY_OK=0
+else
+  DUNSTIFY_OK=1
+fi
+
+if ! command -v timew >/dev/null 2>&1; then
+  echo "Error: timew (Timewarrior) is required but not found. Please install it." >&2
+  exit 1
+fi
+
+if ! command -v inscribe-wall >/dev/null 2>&1; then
+  echo "Error: inscribe-wall is required but not found. Please install it." >&2
+  exit 1
+fi
+
+if ! command -v dmenu >/dev/null 2>&1; then
+  echo "Error: dmenu is required but not found. Please install it." >&2
+  exit 1
+fi
+
+# =======================
+# First-run config wizard
+# =======================
+first_run_wizard() {
+  mkdir -p "$CONFIG_DIR"
+  echo >&2
+  echo "── Timew dmenu setup ──" >&2
+  echo "We'll create a small config so you can pick categories and per-category wallpaper directories." >&2
+  echo "Note: 'STOP' is not a category; it's a control action to stop tracking." >&2
+  echo >&2
+
+  # sensible defaults (no STOP)
+  local default_categories="WORK_CODING,FUN_CODING,VIDEO_GAMES,YOUTUBE,MEETINGS,HOBBY"
+  local default_base="/usr/share/backgrounds/timetracking"
+  local default_wall="$default_base/default.jpg"
+
+  read -r -p "Categories (comma-separated) [$default_categories]: " categories_input
+  categories_input="${categories_input:-$default_categories}"
+
+  read -r -p "Base wallpaper directory [$default_base]: " base_dir
+  base_dir="${base_dir:-$default_base}"
+
+  IFS=',' read -r -a cats <<<"$categories_input"
+
+  echo >&2
+  echo "For each category, specify a DIRECTORY containing images." >&2
+  echo "• Leave blank to use: <base>/<Category>/" >&2
+  echo "• If the directory doesn't exist, you'll be asked whether to create it." >&2
+  echo >&2
+
+  # Write to a temp file, then move into place to avoid half-written configs.
+  local tmp
+  tmp="$(mktemp "${CONFIG_DIR}/config.tmp.XXXXXX")"
+
+  {
+    echo "# ~/.config/timew-dmenu/config"
+    echo "# Generated on $(date)"
+    echo
+    printf 'WALL_BASE_DIR=%q\n' "$base_dir"
+    printf 'CATEGORIES=('
+    for c in "${cats[@]}"; do
+      printf ' %q' "$c"
+    done
+    echo ' )'
+    echo
+    echo "declare -A WALL_DIRS=("
+  } >"$tmp"
+
+  # Collect per-category directories
+  for c in "${cats[@]}"; do
+    local default_dir="$base_dir/$c"
+    read -r -p "Directory for '$c' [$default_dir]: " p
+    p="${p:-$default_dir}"
+
+    # Enforce "directory only"
+    if [[ -e "$p" && ! -d "$p" ]]; then
+      echo "  -> '$p' exists but is not a directory. Please choose a directory." >&2
+      read -r -p "Directory for '$c' [$default_dir]: " p2
+      p="${p2:-$default_dir}"
+    fi
+
+    if [[ ! -d "$p" ]]; then
+      read -r -p "  '$p' does not exist. Create it? [y/N]: " mk
+      case "${mk,,}" in
+        y|yes)
+          if mkdir -p -- "$p"; then
+            echo "  -> Created: $p" >&2
+          else
+            echo "  -> Could not create '$p'. It will still be written; fix it later." >&2
+          fi
+          ;;
+        *) echo "  -> Not created. You can edit the config later to fix." >&2 ;;
+      esac
+    fi
+
+    # Write only the mapping line to the config
+    printf '  [%q]=%q\n' "$c" "$p" >>"$tmp"
+  done
+
+  {
+    echo ")"
+    echo
+    read -r -p "Default wallpaper IMAGE for STOP/unknown [$default_wall]: " defw
+    defw="${defw:-$default_wall}"
+    printf 'DEFAULT_WALL=%q\n' "$defw"
+    echo
+    echo "# Notes:"
+    echo "# - 'STOP' is not listed in CATEGORIES; it's a special action."
+    echo "# - Each category must map to a DIRECTORY; a random image from that directory will be used."
+    echo "# - DEFAULT_WALL may be a single image file for STOP/fallback."
+  } >>"$tmp"
+
+  mv -f -- "$tmp" "$CONFIG_FILE"
+  echo >&2
+  echo "Saved config to: $CONFIG_FILE" >&2
+  echo >&2
+}
+
+# Load config (or create on first run)
+load_config() {
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    first_run_wizard
+    exit 0
+  fi
+  # shellcheck disable=SC1090
+  source "$CONFIG_FILE"
+
+  : "${CATEGORIES:?CATEGORIES not set in config}"
+  : "${DEFAULT_WALL:=}"
+
+  declare -p WALL_DIRS >/dev/null 2>&1 || declare -A WALL_DIRS=()
+  : "${WALL_BASE_DIR:=/usr/share/backgrounds/timetracking}"
+
+  # Sanity check: ensure mapped paths are directories
+  for cat in "${CATEGORIES[@]}"; do
+    dir="${WALL_DIRS[$cat]:-}"
+    if [[ -z "${dir:-}" ]]; then
+      echo "Warning: WALL_DIRS[\"$cat\"] is empty; edit $CONFIG_FILE to set a directory." >&2
+    elif [[ ! -d "$dir" ]]; then
+      if [[ -e "$dir" ]]; then
+        echo "Warning: WALL_DIRS[\"$cat\"] points to a non-directory: $dir" >&2
+      else
+        echo "Warning: WALL_DIRS[\"$cat\"] directory not found: $dir" >&2
+      fi
+    fi
+  done
+}
+
+load_config
+
+# ==========================
+# Helpers for picking images
+# ==========================
+_random_image_in_dir() {
+  local dir="$1"
+  shopt -s nullglob
+  local imgs=("$dir"/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP})
+  shopt -u nullglob
+  [[ ${#imgs[@]} -gt 0 ]] && printf '%s\n' "${imgs[RANDOM % ${#imgs[@]}]}" || return 1
+}
+
+# Only directories are supported for categories
+resolve_wall_for_category() {
+  local cat="$1"
+  local dir="${WALL_DIRS[$cat]:-}"
+  [[ -n "${dir:-}" && -d "$dir" ]] || return 1
+  _random_image_in_dir "$dir" || return 1
+}
+
+set_wallpaper() {
+  local img="$1"
+  local selected="$2"
+  if [[ $FEH_OK -eq 1 && -f "$img" ]]; then
+    inscribe-wall -t "$selected" "$img"
+  fi
+}
+
+notify_timew() {
+  local title="$1"
+  local output="$2"
+  if [[ $DUNSTIFY_OK -eq 1 ]]; then
+    dunstify -u normal -t 3000 "$title" "$output"
+  fi
+}
+
+# ---- Menu (dmenu) ----
+menu_items=("${CATEGORIES[@]}" "STOP")
+selected=$(
+  printf "%s\n" "${menu_items[@]}" | dmenu -i -l 10 -p "Select Category:"
+)
+
+# Exit if no selection
+[ -z "${selected:-}" ] && exit 0
+
+if [[ "$selected" == "STOP" ]]; then
+  output=$(timew stop || true)
+  [[ -n "${DEFAULT_WALL:-}" && -f "$DEFAULT_WALL" ]] && feh --no-fehbg --bg-fill "$DEFAULT_WALL"
+  notify_timew "Timer Stopped" "$output"
+else
+  output=$(timew start "$selected")
+  if wall_img="$(resolve_wall_for_category "$selected")"; then
+    set_wallpaper "$wall_img" "$selected"
+  elif [[ -n "${DEFAULT_WALL:-}" && -f "$DEFAULT_WALL" ]]; then
+    set_wallpaper "$DEFAULT_WALL" "$selected"
+  fi
+  notify_timew "Timer Started: $selected" "$output"
+fi

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper for ,launch-frameless to open Habit Tracker web app
+
+,launch-frameless "https://docs.google.com/spreadsheets/d/1UMCv5YWidS_-CpGkmXRjr_PICOyaGxY481PnTP8I8RI/edit"

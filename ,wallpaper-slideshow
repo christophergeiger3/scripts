@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# wallpaper-slidesho - Cycle wallpapers after a specified interval
+# Requires: feh
+
+show_help() {
+    cat << EOF
+Usage: wallpaper-slidesho [OPTIONS] <DIRECTORY>
+
+Options:
+  -h, --help      Show this help message
+  -i, --interval  Set the wallpaper change interval (default: 10s)
+
+Examples:
+  cycle-wallpapers -i 5s ~/Pictures/Wallpapers
+EOF
+}
+
+parse_args() {
+    interval="10s"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -i|--interval)
+                interval="$2"
+                shift 2
+                ;;
+            *)
+                directory="$1"
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "${directory:-}" ]]; then
+        echo "Error: No directory specified."
+        show_help
+        exit 1
+    fi
+}
+
+start_slideshow() {
+    feh --no-fehbg --bg-scale --randomize --slideshow-delay "$interval" "$directory"
+}
+
+start_slideshow
+
