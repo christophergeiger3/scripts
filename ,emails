@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Wrapper to launch three ,launch-frameless at once, for each gmail account
-,launch-frameless "https://mail.google.com/mail/u/0/#inbox" &
-,launch-frameless "https://mail.google.com/mail/u/1/#inbox" &
-,launch-frameless "https://mail.google.com/mail/u/2/#inbox" &

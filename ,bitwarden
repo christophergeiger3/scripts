@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Wrapper for ,launch-frameless to open Bitwarden web app
-
-,launch-frameless "https://vault.bitwarden.com"

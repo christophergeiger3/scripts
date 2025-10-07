@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Wrapper to launch ,launch-frameless for ChatGPT
-,launch-frameless "https://chat.openai.com/chat" &
